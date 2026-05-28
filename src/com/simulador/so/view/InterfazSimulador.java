@@ -67,7 +67,7 @@ public class InterfazSimulador extends JFrame {
     private javax.swing.Timer timerMemoria;
 
     public InterfazSimulador() {
-        setTitle("Simulador SO v2.0 — CPU + Memoria Virtual");
+        setTitle("Simulador CPU + Memoria Virtual");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(1450, 920);
         setLocationRelativeTo(null);
@@ -91,15 +91,15 @@ public class InterfazSimulador extends JFrame {
             protected void paintContentBorder(Graphics g, int tabPlacement, int selectedIndex) {}
         });
 
-        tabs.addTab("  ⚡ Planificador CPU  ", crearPanelCPU());
-        tabs.addTab("  💾 Memoria Virtual  ", crearPanelMemoria());
+        tabs.addTab("   Planificador CPU  ", crearPanelCPU());
+        tabs.addTab("   Memoria Virtual  ", crearPanelMemoria());
 
         add(tabs, BorderLayout.CENTER);
 
         JPanel status = new JPanel(new BorderLayout());
         status.setBackground(HEADER_BG);
         status.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        JLabel lblStatus = new JLabel("  Listo. Carga los datos de prueba o ingresa valores personalizados.");
+        JLabel lblStatus = new JLabel("  Carga los datos de prueba o ingresa valores personalizados.");
         lblStatus.setForeground(TEXT);
         lblStatus.setFont(FONT_MONO);
         status.add(lblStatus, BorderLayout.WEST);
@@ -114,7 +114,7 @@ public class InterfazSimulador extends JFrame {
         JPanel panelEntrada = new JPanel(new BorderLayout(5, 5));
         panelEntrada.setBackground(BACKGROUND);
         panelEntrada.setPreferredSize(new Dimension(380, 0));
-        panelEntrada.setBorder(crearBorde("📋 Configuración de Procesos"));
+        panelEntrada.setBorder(crearBorde(" Configuración de Procesos"));
 
         String[] cols = {"ID", "Llegada", "Ráfaga", "Prioridad"};
         modeloProcesos = new DefaultTableModel(cols, 0) {
@@ -156,7 +156,7 @@ public class InterfazSimulador extends JFrame {
 
         JPanel panelAlgoritmo = new JPanel(new GridLayout(4, 2, 5, 5));
         panelAlgoritmo.setBackground(BACKGROUND);
-        panelAlgoritmo.setBorder(crearBorde("⚙️ Algoritmo"));
+        panelAlgoritmo.setBorder(crearBorde(" Algoritmo"));
 
         comboAlgoritmoCPU = new JComboBox<>(AlgoritmoPlanificacion.values());
         comboAlgoritmoCPU.setFont(FONT_MONO);
@@ -175,9 +175,9 @@ public class InterfazSimulador extends JFrame {
 
         JPanel panelSim = new JPanel(new GridLayout(1, 3, 5, 5));
         panelSim.setBackground(BACKGROUND);
-        JButton btnIniciar = crearBoton("▶ INICIAR", ACCENT);
-        JButton btnPaso = crearBoton("⏯ PASO", WARNING);
-        JButton btnReset = crearBoton("↺ RESET", DANGER);
+        JButton btnIniciar = crearBoton(" INICIAR", ACCENT);
+        JButton btnPaso = crearBoton(" PASO", WARNING);
+        JButton btnReset = crearBoton(" RESET", DANGER);
 
         btnIniciar.addActionListener(e -> iniciarSimulacionCPU(true));
         btnPaso.addActionListener(e -> iniciarSimulacionCPU(false));
@@ -202,10 +202,10 @@ public class InterfazSimulador extends JFrame {
         panelEstado.setBackground(HEADER_BG);
         panelEstado.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
 
-        lblReloj = crearLabelEstado("⏱ Tick: 0", ACCENT);
-        lblEjecucion = crearLabelEstado("⚡ Ejecución: -", SUCCESS);
-        lblListos = crearLabelEstado("📋 Listos: -", WARNING);
-        lblBloqueados = crearLabelEstado("🚫 Bloqueados: -", DANGER);
+        lblReloj = crearLabelEstado(" Tick: 0", ACCENT);
+        lblEjecucion = crearLabelEstado(" Ejecución: -", SUCCESS);
+        lblListos = crearLabelEstado(" Listos: -", WARNING);
+        lblBloqueados = crearLabelEstado(" Bloqueados: -", DANGER);
         lblTerminados = crearLabelEstado("✓ Terminados: -", TEXT);
 
         panelEstado.add(lblReloj);
@@ -214,23 +214,37 @@ public class InterfazSimulador extends JFrame {
         panelEstado.add(lblBloqueados);
         panelEstado.add(lblTerminados);
 
+        // =====================================================================
+        // CORRECCIÓN: CONFIGURACIÓN INTEGRAL Y ÚNICA DEL JSCROLLPANE PARA GANTT
+        // =====================================================================
         panelGantt = new PanelGantt();
-        panelGantt.setBorder(crearBorde("📊 Diagrama de Gantt"));
+
+        JScrollPane scrollGantt = new JScrollPane(panelGantt);
+        scrollGantt.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollGantt.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+        scrollGantt.setBorder(crearBorde(" Diagrama de Gantt"));
+
+        // Asignamos una altura preferida cómoda al contenedor para que quepan holgadamente los componentes y la barra de scroll
+        scrollGantt.setPreferredSize(new Dimension(0, 195));
+        scrollGantt.getHorizontalScrollBar().setBackground(BACKGROUND);
+        scrollGantt.getHorizontalScrollBar().setUnitIncrement(16);
 
         panelLeyenda = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panelLeyenda.setBackground(BACKGROUND);
-        panelLeyenda.setBorder(crearBorde("🎨 Leyenda"));
+        panelLeyenda.setBorder(crearBorde(" Leyenda"));
         panelLeyenda.setPreferredSize(new Dimension(0, 60));
 
+        // Añadimos las piezas sin repetir ninguna instrucción
         panelCentro.add(panelEstado, BorderLayout.NORTH);
-        panelCentro.add(panelGantt, BorderLayout.CENTER);
+        panelCentro.add(scrollGantt, BorderLayout.CENTER); // <-- El scroll se queda de forma definitiva en el centro
         panelCentro.add(panelLeyenda, BorderLayout.SOUTH);
+        // =====================================================================
 
-        // MODIFICADO: PANEL DERECHO — CARGA DE JTABLE ESTADÍSTICA EN LUGAR DE JTEXTAREA
+        // PANEL DERECHO — ESTADÍSTICAS FINALES
         JPanel panelDer = new JPanel(new BorderLayout(5, 5));
         panelDer.setBackground(BACKGROUND);
         panelDer.setPreferredSize(new Dimension(420, 0));
-        panelDer.setBorder(crearBorde("📈 Estadísticas Finales"));
+        panelDer.setBorder(crearBorde(" Estadísticas Finales"));
 
         String[] colsStats = {"Proc", "Llegada", "Ráfaga", "Fin", "T.Retorno", "T.Espera"};
         modeloEstadisticas = new DefaultTableModel(colsStats, 0) {
@@ -261,35 +275,64 @@ public class InterfazSimulador extends JFrame {
     }
 
     private void iniciarSimulacionCPU(boolean autoPlay) {
-        if (core.getPlanificadorCPU().isSimulando()) return;
-
-        procesosActuales.clear();
-        for (int i = 0; i < modeloProcesos.getRowCount(); i++) {
-            int id = (Integer) modeloProcesos.getValueAt(i, 0);
-            int llegada = (Integer) modeloProcesos.getValueAt(i, 1);
-            int rafaga = (Integer) modeloProcesos.getValueAt(i, 2);
-            int prioridad = (Integer) modeloProcesos.getValueAt(i, 3);
-            Proceso p = new Proceso(id, llegada, rafaga, prioridad);
-            p.setColor(PROC_COLORS[(id - 1) % PROC_COLORS.length]);
-            procesosActuales.add(p);
+        // =====================================================================
+        // LOGICA DE REPRODUCCIÓN / PAUSA DE INTERRUPCIÓN
+        // =====================================================================
+        if (!autoPlay) { // Entra aquí cuando se presiona el botón PASO (Pausa)
+            if (core.getPlanificadorCPU().isSimulando()) {
+                if (timerCPU != null && timerCPU.isRunning()) {
+                    // 1. Si está corriendo de forma automática, lo pausamos
+                    timerCPU.stop();
+                    System.out.println("=== SIMULACIÓN PAUSADA ===");
+                    return;
+                } else {
+                    // 2. Si ya estaba simulando pero estaba pausado, LO REANUDAMOS automáticamente
+                    if (timerCPU != null) {
+                        timerCPU.start();
+                        System.out.println("=== SIMULACIÓN REANUDADA ===");
+                        return;
+                    }
+                }
+            }
         }
 
-        if (procesosActuales.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay procesos para simular.");
-            return;
+        // Si el usuario presiona INICIAR y ya está corriendo, ignoramos el clic extra
+        if (core.getPlanificadorCPU().isSimulando() && autoPlay) return;
+
+        // =====================================================================
+        // CARGA E INICIALIZACIÓN INICIAL (Solo si no ha arrancado en el Core)
+        // =====================================================================
+        if (!core.getPlanificadorCPU().isSimulando()) {
+            procesosActuales.clear();
+            for (int i = 0; i < modeloProcesos.getRowCount(); i++) {
+                int id = (Integer) modeloProcesos.getValueAt(i, 0);
+                int llegada = (Integer) modeloProcesos.getValueAt(i, 1);
+                int rafaga = (Integer) modeloProcesos.getValueAt(i, 2);
+                int prioridad = (Integer) modeloProcesos.getValueAt(i, 3);
+                Proceso p = new Proceso(id, llegada, rafaga, prioridad);
+                p.setColor(PROC_COLORS[(id - 1) % PROC_COLORS.length]);
+                procesosActuales.add(p);
+            }
+
+            if (procesosActuales.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No hay procesos para simular.");
+                return;
+            }
+
+            AlgoritmoPlanificacion alg = (AlgoritmoPlanificacion) comboAlgoritmoCPU.getSelectedItem();
+            int q = (Integer) spinnerQuantum.getValue();
+
+            core.iniciarCPU(procesosActuales, alg, q);
+            modeloEstadisticas.setRowCount(0);
         }
 
-        AlgoritmoPlanificacion alg = (AlgoritmoPlanificacion) comboAlgoritmoCPU.getSelectedItem();
-        int q = (Integer) spinnerQuantum.getValue();
-
-        core.iniciarCPU(procesosActuales, alg, q);
-        modeloEstadisticas.setRowCount(0); // Limpieza de ejecuciones anteriores
-
+        // CONTROL DEL FLUJO TEMPORIZADO
         if (autoPlay) {
             if (timerCPU != null) timerCPU.stop();
             timerCPU = new javax.swing.Timer(600, e -> ejecutarTickCPU());
             timerCPU.start();
         } else {
+            // Si la simulación no había iniciado nunca y le dan a PASO directamente, ejecuta 1 tick manual
             ejecutarTickCPU();
         }
     }
@@ -297,11 +340,11 @@ public class InterfazSimulador extends JFrame {
     private void resetSimulacionCPU() {
         if (timerCPU != null) timerCPU.stop();
         core.resetCPU();
-        lblReloj.setText("⏱ Tick: 0");
-        lblEjecucion.setText("⚡ Ejecución: -");
-        lblListos.setText("📋 Listos: -");
-        lblBloqueados.setText("🚫 Bloqueados: -");
-        lblTerminados.setText("✓ Terminados: -");
+        lblReloj.setText(" Tick: 0");
+        lblEjecucion.setText(" Ejecución: -");
+        lblListos.setText(" Listos: -");
+        lblBloqueados.setText(" Bloqueados: -");
+        lblTerminados.setText(" Terminados: -");
         modeloEstadisticas.setRowCount(0);
         panelGantt.setDatos(new ArrayList<>(), new ArrayList<>(), 0);
         panelLeyenda.removeAll();
@@ -313,7 +356,9 @@ public class InterfazSimulador extends JFrame {
         boolean continua = core.tickCPU();
         actualizarUICPU();
         if (!continua) {
-            if (timerCPU != null) timerCPU.stop();
+            if (timerCPU != null) {
+                timerCPU.stop();
+            }
             mostrarEstadisticasCPU();
         }
     }
@@ -323,23 +368,23 @@ public class InterfazSimulador extends JFrame {
         int tick = plan.getTickActual();
         Proceso ejec = plan.getEnEjecucion();
 
-        lblReloj.setText("⏱ Tick: " + tick);
-        lblEjecucion.setText("⚡ Ejecución: " + (ejec != null ? ejec.getNombre() : "Idle"));
+        lblReloj.setText(" Tick: " + tick);
+        lblEjecucion.setText(" Ejecución: " + (ejec != null ? ejec.getNombre() : "Idle"));
 
         String listosStr = plan.getColaListos().stream()
                 .filter(p -> p.getEstado() == EstadoProceso.LISTO)
                 .map(Proceso::getNombre)
                 .reduce((a, b) -> a + "," + b).orElse("-");
-        lblListos.setText("📋 Listos: " + listosStr);
+        lblListos.setText(" Listos: " + listosStr);
 
         String bloqStr = plan.getColaBloqueados().isEmpty() ? "-" :
                 plan.getColaBloqueados().stream().map(Proceso::getNombre)
                         .reduce((a, b) -> a + "," + b).orElse("-");
-        lblBloqueados.setText("🚫 Bloqueados: " + bloqStr);
+        lblBloqueados.setText(" Bloqueados: " + bloqStr);
 
         String termStr = plan.getColaTerminados().stream().map(Proceso::getNombre)
                 .reduce((a, b) -> a + "," + b).orElse("-");
-        lblTerminados.setText("✓ Terminados: " + termStr);
+        lblTerminados.setText(" Terminados: " + termStr);
 
         panelGantt.setDatos(plan.getHistorial(), procesosActuales, tick);
 
@@ -362,7 +407,6 @@ public class InterfazSimulador extends JFrame {
     // MODIFICADO: RENDERIZA FILAS INDIVIDUALES Y PROMEDIOS EN LA NUEVA JTABLE
     // REEMPLAZA ESTE MÉTODO EN InterfazSimulador.java
     private void mostrarEstadisticasCPU() {
-        System.out.println("=== ¡SÍ ESTOY USANDO EL CÓDIGO NUEVO! ===");
         List<Proceso> testList = core.getPlanificadorCPU().getColaTerminados();
         System.out.println("Cantidad de procesos en cola terminados: " + (testList != null ? testList.size() : 0));
         // ========================================
@@ -430,7 +474,7 @@ public class InterfazSimulador extends JFrame {
         JPanel panelConfig = new JPanel(new BorderLayout(5, 5));
         panelConfig.setBackground(BACKGROUND);
         panelConfig.setPreferredSize(new Dimension(350, 0));
-        panelConfig.setBorder(crearBorde("⚙️ Configuración Memoria"));
+        panelConfig.setBorder(crearBorde(" Configuración Memoria"));
 
         JPanel gridConfig = new JPanel(new GridLayout(5, 2, 8, 8));
         gridConfig.setBackground(BACKGROUND);
@@ -457,8 +501,8 @@ public class InterfazSimulador extends JFrame {
         JPanel panelBotones = new JPanel(new GridLayout(1, 3, 5, 5));
         panelBotones.setBackground(BACKGROUND);
         JButton btnCaso2 = crearBoton("Cargar Caso 2", WARNING);
-        JButton btnIniciar = crearBoton("▶ INICIAR", ACCENT);
-        JButton btnReset = crearBoton("↺ RESET", DANGER);
+        JButton btnIniciar = crearBoton(" INICIAR", ACCENT);
+        JButton btnReset = crearBoton(" RESET", DANGER);
 
         btnCaso2.addActionListener(e -> {
             spinnerMarcos.setValue(3);
@@ -483,7 +527,7 @@ public class InterfazSimulador extends JFrame {
         txtLogMemoria.setFont(FONT_MONO);
         txtLogMemoria.setEditable(false);
         JScrollPane scrollLog = new JScrollPane(txtLogMemoria);
-        scrollLog.setBorder(crearBorde("📝 Log de Eventos"));
+        scrollLog.setBorder(crearBorde(" Log de Eventos"));
         scrollLog.setPreferredSize(new Dimension(0, 200));
 
         panelConfig.add(panelSurConfig, BorderLayout.NORTH);
@@ -495,9 +539,9 @@ public class InterfazSimulador extends JFrame {
         JPanel panelEstadoMem = new JPanel(new GridLayout(1, 4, 10, 5));
         panelEstadoMem.setBackground(HEADER_BG);
         panelEstadoMem.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
-        lblFallos = crearLabelEstado("❌ Fallos: 0", DANGER);
-        lblHits = crearLabelEstado("✓ Hits: 0", SUCCESS);
-        lblPasoMemoria = crearLabelEstado("⏱ Paso: 0/0", ACCENT);
+        lblFallos = crearLabelEstado(" Fallos: 0", DANGER);
+        lblHits = crearLabelEstado(" Hits: 0", SUCCESS);
+        lblPasoMemoria = crearLabelEstado(" Paso: 0/0", ACCENT);
         JLabel lblAlgMem = crearLabelEstado("Algoritmo: -", TEXT);
         panelEstadoMem.add(lblFallos);
         panelEstadoMem.add(lblHits);
@@ -506,11 +550,11 @@ public class InterfazSimulador extends JFrame {
 
         panelRAM = new JPanel();
         panelRAM.setBackground(BACKGROUND);
-        panelRAM.setBorder(crearBorde("💾 Marcos de RAM"));
+        panelRAM.setBorder(crearBorde(" Marcos de RAM"));
 
         panelSecuencia = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         panelSecuencia.setBackground(BACKGROUND);
-        panelSecuencia.setBorder(crearBorde("📑 Secuencia de Páginas"));
+        panelSecuencia.setBorder(crearBorde(" Secuencia de Páginas"));
         panelSecuencia.setPreferredSize(new Dimension(0, 100));
 
         panelVis.add(panelEstadoMem, BorderLayout.NORTH);
@@ -567,9 +611,9 @@ public class InterfazSimulador extends JFrame {
         if (timerMemoria != null) timerMemoria.stop();
         core.resetMemoria();
         txtLogMemoria.setText("");
-        lblFallos.setText("❌ Fallos: 0");
-        lblHits.setText("✓ Hits: 0");
-        lblPasoMemoria.setText("⏱ Paso: 0/0");
+        lblFallos.setText(" Fallos: 0");
+        lblHits.setText(" Hits: 0");
+        lblPasoMemoria.setText(" Paso: 0/0");
         panelRAM.removeAll();
         panelSecuencia.removeAll();
         panelRAM.revalidate();
@@ -660,9 +704,9 @@ public class InterfazSimulador extends JFrame {
             }
         }
 
-        lblFallos.setText("❌ Fallos: " + core.getMemoriaRAM().getFallos());
-        lblHits.setText("✓ Hits: " + core.getMemoriaRAM().getHits());
-        lblPasoMemoria.setText("⏱ Paso: " + tick + "/" + core.getMemoriaRAM().getSecuencia().size());
+        lblFallos.setText(" Fallos: " + core.getMemoriaRAM().getFallos());
+        lblHits.setText(" Hits: " + core.getMemoriaRAM().getHits());
+        lblPasoMemoria.setText(" Paso: " + tick + "/" + core.getMemoriaRAM().getSecuencia().size());
     }
 
     private Border crearBorde(String titulo) {

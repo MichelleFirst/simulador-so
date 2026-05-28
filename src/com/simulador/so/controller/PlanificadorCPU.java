@@ -49,11 +49,13 @@ public class PlanificadorCPU {
             p.setEnFalloPagina(false);
         }
     }
-
     public boolean ejecutarTick() {
         if (!simulando) return false;
 
-        // 1. Llegada de procesos en el tick actual
+        // ==========================================
+        // PASO 1: LLEGADA DE NUEVOS PROCESOS
+        // ==========================================
+        // Se insertan en la cola en el orden exacto de aparición
         for (Proceso p : procesos) {
             if (p.getLlegada() == tickActual && p.getEstado() == EstadoProceso.NUEVO) {
                 p.setEstado(EstadoProceso.LISTO);
@@ -63,26 +65,136 @@ public class PlanificadorCPU {
             }
         }
 
-        // 2. Evaluar Expropiación (Solo si hay alguien ejecutando y el algoritmo es expropiativo)
-        if (enEjecucion != null && enEjecucion.getEstado() == EstadoProceso.EJECUCION && algoritmo.isExpropiativo()) {
-            Proceso elMejorCandidato = obtenerMejorEnListos();
-            if (elMejorCandidato != null && debeExpropiar(enEjecucion, elMejorCandidato)) {
-                // El proceso actual sufre expropiación y regresa a la cola de listos
-                enEjecucion.setEstado(EstadoProceso.LISTO);
-                colaListos.offer(enEjecucion);
-                enEjecucion = null;
-                ticksEjecucionActual = 0;
-            }
+        // ==========================================
+        // PASO 2: LÓGICA EXCLUSIVA DE PLANIFICACIÓN
+        // ==========================================
+        switch (algoritmo) {
+
+            case FCFS:
+                // "El primero en llegar es el primero en ejecutarse. No expropiativo."
+                // Si la CPU está libre, toma estrictamente el frente de la cola (FIFO puro)
+                if (enEjecucion == null || enEjecucion.getEstado() == EstadoProceso.TERMINADO) {
+                    colaListos.removeIf(p -> p.getEstado() == EstadoProceso.TERMINADO || p.getEstado() == EstadoProceso.EJECUCION);
+                    enEjecucion = colaListos.poll();
+                    ticksEjecucionActual = 0;
+                }
+                break;
+
+            case SJF_NO_EXPROPIATIVO:
+                // "Escoge la ráfaga más pequeña. Cuando empieza, termina completo."
+                if (enEjecucion == null || enEjecucion.getEstado() == EstadoProceso.TERMINADO) {
+                    colaListos.removeIf(p -> p.getEstado() == EstadoProceso.TERMINADO || p.getEstado() == EstadoProceso.EJECUCION);
+                    enEjecucion = colaListos.stream()
+                            .min(Comparator.comparingInt(Proceso::getRafaga)
+                                    .thenComparingInt(p -> colaListos.indexOf(p)))
+                            .orElse(null);
+                    if (enEjecucion != null) {
+                        colaListos.remove(enEjecucion);
+                    }
+                    ticksEjecucionActual = 0;
+                }
+                break;
+
+            case SRTF:
+                // "Expropiativo. Siempre ejecuta el menor tiempo restante. Si el nuevo es menor, interrumpe."
+                colaListos.removeIf(p -> p.getEstado() == EstadoProceso.TERMINADO || p.getEstado() == EstadoProceso.EJECUCION);
+
+                // Evaluar interrupción/expropiación antes de procesar el tick actual
+                if (enEjecucion != null && enEjecucion.getEstado() == EstadoProceso.EJECUCION) {
+                    Proceso mejorCandidato = colaListos.stream()
+                            .min(Comparator.comparingInt(Proceso::getTiempoRestante)
+                                    .thenComparingInt(p -> colaListos.indexOf(p)))
+                            .orElse(null);
+
+                    // Si hay alguien listo con un tiempo restante estrictamente menor, se le quita la CPU
+                    if (mejorCandidato != null && mejorCandidato.getTiempoRestante() < enEjecucion.getTiempoRestante()) {
+                        enEjecucion.setEstado(EstadoProceso.LISTO);
+                        colaListos.offer(enEjecucion); // Regresa al final de la cola de espera
+                        enEjecucion = null;
+                        ticksEjecucionActual = 0;
+                    }
+                }
+
+                // Si quedó vacío por expropiación o el proceso previo terminó, asignamos el óptimo
+                if (enEjecucion == null || enEjecucion.getEstado() == EstadoProceso.TERMINADO) {
+                    enEjecucion = colaListos.stream()
+                            .min(Comparator.comparingInt(Proceso::getTiempoRestante)
+                                    .thenComparingInt(p -> colaListos.indexOf(p)))
+                            .orElse(null);
+                    if (enEjecucion != null) {
+                        colaListos.remove(enEjecucion);
+                    }
+                    ticksEjecucionActual = 0;
+                }
+                break;
+
+            case ROUND_ROBIN:
+                // "Cada proceso recibe un tiempo pequeño llamado quantum. Si no termina, vuelve al final de la cola."
+                if (enEjecucion != null && enEjecucion.getEstado() == EstadoProceso.EJECUCION) {
+                    if (ticksEjecucionActual >= quantum) {
+                        enEjecucion.setEstado(EstadoProceso.LISTO);
+                        colaListos.offer(enEjecucion); // Expira Quantum: se forma al final de la fila
+                        enEjecucion = null;
+                        ticksEjecucionActual = 0;
+                    }
+                }
+
+                if (enEjecucion == null || enEjecucion.getEstado() == EstadoProceso.TERMINADO) {
+                    colaListos.removeIf(p -> p.getEstado() == EstadoProceso.TERMINADO || p.getEstado() == EstadoProceso.EJECUCION);
+                    enEjecucion = colaListos.poll(); // Toma el siguiente disponible en orden FIFO
+                    ticksEjecucionActual = 0;
+                }
+                break;
+
+            case PRIORIDAD_NO_EXPROPIATIVA:
+                // "Mayor prioridad ejecuta primero (menor número = mayor prioridad). No interrumpe."
+                if (enEjecucion == null || enEjecucion.getEstado() == EstadoProceso.TERMINADO) {
+                    colaListos.removeIf(p -> p.getEstado() == EstadoProceso.TERMINADO || p.getEstado() == EstadoProceso.EJECUCION);
+                    enEjecucion = colaListos.stream()
+                            .min(Comparator.comparingInt(Proceso::getPrioridad)
+                                    .thenComparingInt(p -> colaListos.indexOf(p)))
+                            .orElse(null);
+                    if (enEjecucion != null) {
+                        colaListos.remove(enEjecucion);
+                    }
+                    ticksEjecucionActual = 0;
+                }
+                break;
+
+            case PRIORIDAD_EXPROPIATIVA:
+                // "Expropiativo. Sí interrumpe si llega un proceso con mayor prioridad (menor número)."
+                colaListos.removeIf(p -> p.getEstado() == EstadoProceso.TERMINADO || p.getEstado() == EstadoProceso.EJECUCION);
+
+                if (enEjecucion != null && enEjecucion.getEstado() == EstadoProceso.EJECUCION) {
+                    Proceso mejorCandidato = colaListos.stream()
+                            .min(Comparator.comparingInt(Proceso::getPrioridad)
+                                    .thenComparingInt(p -> colaListos.indexOf(p)))
+                            .orElse(null);
+
+                    if (mejorCandidato != null && mejorCandidato.getPrioridad() < enEjecucion.getPrioridad()) {
+                        enEjecucion.setEstado(EstadoProceso.LISTO);
+                        colaListos.offer(enEjecucion);
+                        enEjecucion = null;
+                        ticksEjecucionActual = 0;
+                    }
+                }
+
+                if (enEjecucion == null || enEjecucion.getEstado() == EstadoProceso.TERMINADO) {
+                    enEjecucion = colaListos.stream()
+                            .min(Comparator.comparingInt(Proceso::getPrioridad)
+                                    .thenComparingInt(p -> colaListos.indexOf(p)))
+                            .orElse(null);
+                    if (enEjecucion != null) {
+                        colaListos.remove(enEjecucion);
+                    }
+                    ticksEjecucionActual = 0;
+                }
+                break;
         }
 
-        // 3. Asignar CPU si está libre
-        if (enEjecucion == null || enEjecucion.getEstado() == EstadoProceso.TERMINADO || enEjecucion.getEstado() == EstadoProceso.BLOQUEADO) {
-            enEjecucion = seleccionarProceso();
-            ticksEjecucionActual = 0;
-        }
-
-        // 4. Ejecutar el proceso seleccionado en este tick
-        // 4. Ejecutar el proceso seleccionado en este tick
+        // ==========================================
+        // PASO 3: COMPUTACIÓN EN CPU (BLOQUE UNIFICADO)
+        // ==========================================
         int procesoEjecutadoId = -1;
         if (enEjecucion != null) {
             if (enEjecucion.getTiempoInicio() == -1) {
@@ -90,53 +202,44 @@ public class PlanificadorCPU {
             }
             enEjecucion.setEstado(EstadoProceso.EJECUCION);
 
-            // !!! CORRECCIÓN 1: Decrementar tiempoRestante, NUNCA la ráfaga original !!!
+            // Ejecución de la unidad de ráfaga
             enEjecucion.setTiempoRestante(enEjecucion.getTiempoRestante() - 1);
             ticksEjecucionActual++;
             procesoEjecutadoId = enEjecucion.getId();
 
-
-            // !!! BUSCA ESTE BLOQUE EXACTO EN PLANIFICADORCPU.JAVA Y REEMPLÁZALO !!!
-            // === ASEGÚRATE DE QUE EL PASO 4 EN PlanificadorCPU.java ESTÉ ASÍ ===
+            // Si el proceso agota su tiempo restante en este tick, se destruye y sale de CPU
             if (enEjecucion.getTiempoRestante() <= 0) {
                 enEjecucion.setEstado(EstadoProceso.TERMINADO);
-
-                // Como el proceso se ejecuta durante el tick actual, finaliza en el siguiente instante de tiempo
                 int finExacto = this.tickActual + 1;
                 enEjecucion.setTiempoFin(finExacto);
 
-                // Fórmulas matemáticas estándar de Sistemas Operativos
+                // Fórmulas estándar de Sistemas Operativos
                 int tRetorno = finExacto - enEjecucion.getLlegada();
                 int tEspera = tRetorno - enEjecucion.getRafaga();
-
                 enEjecucion.setTiempoRetorno(tRetorno);
                 enEjecucion.setTiempoEspera(tEspera);
 
                 if (!colaTerminados.contains(enEjecucion)) {
                     colaTerminados.add(enEjecucion);
                 }
-
-                enEjecucion = null;
-                ticksEjecucionActual = 0;
-            }
-            // Verificar si expiró su Quantum (Round Robin)
-            else if (algoritmo == AlgoritmoPlanificacion.ROUND_ROBIN && ticksEjecucionActual >= quantum) {
-                enEjecucion.setEstado(EstadoProceso.LISTO);
-                colaListos.offer(enEjecucion);
                 enEjecucion = null;
                 ticksEjecucionActual = 0;
             }
         }
 
-
-        // 5. Incrementar tiempos de espera de los procesos que se quedaron esperando en LISTO
+        // ==========================================
+        // PASO 4: CALCULO DE TIEMPOS DE ESPERA REALES
+        // ==========================================
+        // Solo acumulan espera aquellos procesos legítimamente parados en colaListos
         for (Proceso p : colaListos) {
-            if (p.getEstado() == EstadoProceso.LISTO) {
+            if (p.getEstado() == EstadoProceso.LISTO && p.getId() != procesoEjecutadoId) {
                 p.setTiempoEspera(p.getTiempoEspera() + 1);
             }
         }
 
-        // 6. Registrar en el Historial para el Diagrama de Gantt de la Vista
+        // ==========================================
+        // PASO 5: VOLCADO AL DIAGRAMA DE GANTT
+        // ==========================================
         HistorialTick tr = new HistorialTick();
         tr.setTick(tickActual);
         tr.setProcesoEjecucion(procesoEjecutadoId);
@@ -147,7 +250,7 @@ public class PlanificadorCPU {
 
         tickActual++;
 
-        // Condición de término de la simulación
+        // Criterio de parada del simulador
         if (colaTerminados.size() == procesos.size()) {
             simulando = false;
             return false;
@@ -158,28 +261,31 @@ public class PlanificadorCPU {
     private Proceso obtenerMejorEnListos() {
         if (colaListos.isEmpty()) return null;
 
-        // Clausura de limpieza preventiva
+        // Limpieza preventiva de estados en la cola
         colaListos.removeIf(p -> p.getEstado() == EstadoProceso.TERMINADO || p.getEstado() == EstadoProceso.EJECUCION);
         if (colaListos.isEmpty()) return null;
 
         switch (algoritmo) {
             case FCFS:
             case ROUND_ROBIN:
-                return colaListos.peek(); // El primero que llegó
+                return colaListos.peek();
+
             case SJF_NO_EXPROPIATIVO:
             case SRTF:
-                // Menor tiempo restante; si hay empate, el que llegó primero (id o llegada)
+                // Menor tiempo restante. Si hay empate, desempata el que esté primero en la cola (menor índice)
                 return colaListos.stream()
                         .min(Comparator.comparingInt(Proceso::getTiempoRestante)
-                                .thenComparingInt(Proceso::getLlegada))
+                                .thenComparingInt(p -> colaListos.indexOf(p)))
                         .orElse(null);
+
             case PRIORIDAD_NO_EXPROPIATIVA:
             case PRIORIDAD_EXPROPIATIVA:
-                // Menor valor numérico = Mayor prioridad; desempata por llegada
+                // Menor valor numérico = Mayor prioridad. Si hay empate, por orden en la cola
                 return colaListos.stream()
                         .min(Comparator.comparingInt(Proceso::getPrioridad)
-                                .thenComparingInt(Proceso::getLlegada))
+                                .thenComparingInt(p -> colaListos.indexOf(p)))
                         .orElse(null);
+
             default:
                 return colaListos.peek();
         }
