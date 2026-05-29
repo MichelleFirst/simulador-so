@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="simulador-so:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/simulador_so_jar</output-path>
+    <root id="archive" name="simulador-so.jar">
+      <element id="module-output" name="simulador-so" />
+    </root>
+  </artifact>
+</component>
