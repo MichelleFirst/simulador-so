@@ -15,57 +15,142 @@ import java.awt.event.*;
 import java.util.*;
 import java.util.List;
 
+/**
+ * Interfaz gráfica principal del simulador de sistema operativo.
+ * Integra las simulaciones de planificación de CPU y memoria virtual.
+ * Proporciona visualización en tiempo real del diagrama de Gantt y estado de la RAM.
+ * 
+ * @author SimuladorSO
+ * @version 1.0
+ */
 public class InterfazSimulador extends JFrame {
 
+    // ==================== COMPONENTES PRINCIPALES ====================
+    
+    /** Núcleo del simulador que coordina CPU y memoria */
     private final SimuladorCore core = new SimuladorCore();
+    
+    /** Panel de pestañas para alternar entre CPU y memoria */
     private final JTabbedPane tabs = new JTabbedPane();
 
+    // ==================== CONSTANTES DE ESTILO ====================
+    
+    /** Color de fondo principal de la aplicación */
     private static final Color BACKGROUND = new Color(15, 15, 35);
+    
+    /** Color de fondo de paneles secundarios */
     private static final Color PANEL_BG   = new Color(25, 25, 55);
+    
+    /** Color de fondo de cabeceras */
     private static final Color HEADER_BG  = new Color(35, 35, 75);
+    
+    /** Color de bordes */
     private static final Color BORDER     = new Color(60, 60, 120);
+    
+    /** Color de texto estándar */
     private static final Color TEXT       = new Color(220, 220, 255);
+    
+    /** Color de acento principal (cian) */
     private static final Color ACCENT     = new Color(0, 240, 255);
+    
+    /** Color de acento secundario (rosa) */
     private static final Color ACCENT2    = new Color(255, 42, 109);
+    
+    /** Color para éxito/acierto (verde) */
     private static final Color SUCCESS    = new Color(5, 255, 161);
+    
+    /** Color para advertencia (amarillo) */
     private static final Color WARNING    = new Color(255, 204, 0);
+    
+    /** Color para error/fallo (rojo) */
     private static final Color DANGER     = new Color(255, 0, 85);
 
+    /** Fuente monoespaciada para datos técnicos */
     private static final Font FONT_MONO   = new Font("Consolas", Font.PLAIN, 12);
+    
+    /** Fuente en negrita para etiquetas */
     private static final Font FONT_BOLD   = new Font("Segoe UI", Font.BOLD, 13);
+    
+    /** Fuente de título */
     private static final Font FONT_TITLE  = new Font("Segoe UI", Font.BOLD, 16);
 
+    /** Paleta de colores predefinida para los procesos */
     private static final Color[] PROC_COLORS = {
             new Color(0, 240, 255), new Color(255, 42, 109), new Color(5, 255, 161),
             new Color(255, 204, 0), new Color(180, 80, 255), new Color(255, 120, 50),
             new Color(0, 200, 255), new Color(255, 80, 180),
     };
 
+    // ==================== COMPONENTES DE CPU ====================
+    
+    /** Modelo de tabla para entrada de procesos */
     private DefaultTableModel modeloProcesos;
+    
+    /** Tabla de entrada de procesos */
     private JTable tablaProcesos;
+    
+    /** Selector de algoritmo de planificación */
     private JComboBox<AlgoritmoPlanificacion> comboAlgoritmoCPU;
+    
+    /** Selector de quantum para Round Robin */
     private JSpinner spinnerQuantum;
+    
+    /** Panel para dibujar el diagrama de Gantt */
     private PanelGantt panelGantt;
+    
+    /** Panel de leyenda de colores de procesos */
     private JPanel panelLeyenda;
 
-    // TABLA NUEVA DE ESTADÍSTICAS (Reemplaza a txtEstadisticas)
+    /** Tabla de estadísticas finales de procesos */
     private JTable tablaEstadisticas;
+    
+    /** Modelo de la tabla de estadísticas */
     private DefaultTableModel modeloEstadisticas;
 
+    /** Etiquetas de estado en tiempo real */
     private JLabel lblReloj, lblEjecucion, lblListos, lblBloqueados, lblTerminados;
+    
+    /** Temporizador para simulación automática de CPU */
     private javax.swing.Timer timerCPU;
+    
+    /** Lista de procesos actuales en simulación */
     private List<Proceso> procesosActuales = new ArrayList<>();
 
+    // ==================== COMPONENTES DE MEMORIA ====================
+    
+    /** Selector de número de marcos de RAM */
     private JSpinner spinnerMarcos;
+    
+    /** Selector de tamaño de página (no utilizado actualmente) */
     private JSpinner spinnerPaginaSize;
+    
+    /** Campo de texto para la secuencia de páginas */
     private JTextField txtSecuencia;
+    
+    /** Selector de algoritmo de reemplazo */
     private JComboBox<AlgoritmoReemplazo> comboAlgMemoria;
+    
+    /** Panel visual de marcos de RAM */
     private JPanel panelRAM;
+    
+    /** Panel visual de secuencia de páginas */
     private JPanel panelSecuencia;
+    
+    /** Área de texto para el log de eventos de memoria */
     private JTextArea txtLogMemoria;
+    
+    /** Etiquetas de estadísticas de memoria */
     private JLabel lblFallos, lblHits, lblPasoMemoria;
+    
+    /** Temporizador para simulación automática de memoria */
     private javax.swing.Timer timerMemoria;
 
+    // ==================== CONSTRUCTOR ====================
+    
+    /**
+     * Constructor que inicializa la ventana principal y sus componentes.
+     * Configura el look and feel, las pestañas y los paneles de simulación.
+     */
     public InterfazSimulador() {
         setTitle("Simulador CPU + Memoria Virtual");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -73,6 +158,7 @@ public class InterfazSimulador extends JFrame {
         setLocationRelativeTo(null);
         getContentPane().setBackground(BACKGROUND);
 
+        // Configurar estilo personalizado de las pestañas
         tabs.setFont(FONT_BOLD);
         tabs.setBackground(BACKGROUND);
         tabs.setForeground(TEXT);
@@ -91,11 +177,13 @@ public class InterfazSimulador extends JFrame {
             protected void paintContentBorder(Graphics g, int tabPlacement, int selectedIndex) {}
         });
 
+        // Agregar las pestañas principales
         tabs.addTab("   Planificador CPU  ", crearPanelCPU());
         tabs.addTab("   Memoria Virtual  ", crearPanelMemoria());
 
         add(tabs, BorderLayout.CENTER);
 
+        // Barra de estado inferior
         JPanel status = new JPanel(new BorderLayout());
         status.setBackground(HEADER_BG);
         status.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
@@ -106,16 +194,26 @@ public class InterfazSimulador extends JFrame {
         add(status, BorderLayout.SOUTH);
     }
 
+    // ==================== MÉTODOS DE CONSTRUCCIÓN DE PANELES ====================
+    
+    /**
+     * Crea el panel de simulación de planificación de CPU.
+     * Incluye tabla de procesos, controles de algoritmo, visualización Gantt y estadísticas.
+     * 
+     * @return Panel configurado para la simulación de CPU
+     */
     private JPanel crearPanelCPU() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(BACKGROUND);
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // ==================== PANEL DE ENTRADA (IZQUIERDA) ====================
         JPanel panelEntrada = new JPanel(new BorderLayout(5, 5));
         panelEntrada.setBackground(BACKGROUND);
         panelEntrada.setPreferredSize(new Dimension(380, 0));
         panelEntrada.setBorder(crearBorde(" Configuración de Procesos"));
 
+        // Configuración de la tabla de procesos
         String[] cols = {"ID", "Llegada", "Ráfaga", "Prioridad"};
         modeloProcesos = new DefaultTableModel(cols, 0) {
             public boolean isCellEditable(int row, int col) { return col != 0; }
@@ -126,6 +224,7 @@ public class InterfazSimulador extends JFrame {
         JScrollPane scrollTabla = new JScrollPane(tablaProcesos);
         scrollTabla.setBorder(BorderFactory.createLineBorder(BORDER));
 
+        // Botones de gestión de la tabla
         JPanel panelBotonesTabla = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panelBotonesTabla.setBackground(BACKGROUND);
         JButton btnAdd = crearBoton("+ Proceso", SUCCESS);
@@ -154,6 +253,7 @@ public class InterfazSimulador extends JFrame {
         panelTablaWrapper.add(panelBotonesTabla, BorderLayout.NORTH);
         panelTablaWrapper.add(scrollTabla, BorderLayout.CENTER);
 
+        // Panel de selección de algoritmo
         JPanel panelAlgoritmo = new JPanel(new GridLayout(4, 2, 5, 5));
         panelAlgoritmo.setBackground(BACKGROUND);
         panelAlgoritmo.setBorder(crearBorde(" Algoritmo"));
@@ -173,6 +273,7 @@ public class InterfazSimulador extends JFrame {
         panelAlgoritmo.add(new JLabel());
         panelAlgoritmo.add(new JLabel());
 
+        // Botones de simulación
         JPanel panelSim = new JPanel(new GridLayout(1, 3, 5, 5));
         panelSim.setBackground(BACKGROUND);
         JButton btnIniciar = crearBoton(" INICIAR", ACCENT);
@@ -195,9 +296,11 @@ public class InterfazSimulador extends JFrame {
         panelEntrada.add(panelTablaWrapper, BorderLayout.CENTER);
         panelEntrada.add(panelSurEntrada, BorderLayout.SOUTH);
 
+        // ==================== PANEL CENTRAL ====================
         JPanel panelCentro = new JPanel(new BorderLayout(5, 5));
         panelCentro.setBackground(BACKGROUND);
 
+        // Panel de estado en tiempo real
         JPanel panelEstado = new JPanel(new GridLayout(1, 5, 10, 5));
         panelEstado.setBackground(HEADER_BG);
         panelEstado.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
@@ -214,33 +317,28 @@ public class InterfazSimulador extends JFrame {
         panelEstado.add(lblBloqueados);
         panelEstado.add(lblTerminados);
 
-        // =====================================================================
-        // CORRECCIÓN: CONFIGURACIÓN INTEGRAL Y ÚNICA DEL JSCROLLPANE PARA GANTT
-        // =====================================================================
+        // Panel del diagrama de Gantt (con scroll horizontal)
         panelGantt = new PanelGantt();
 
         JScrollPane scrollGantt = new JScrollPane(panelGantt);
         scrollGantt.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scrollGantt.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
         scrollGantt.setBorder(crearBorde(" Diagrama de Gantt"));
-
-        // Asignamos una altura preferida cómoda al contenedor para que quepan holgadamente los componentes y la barra de scroll
         scrollGantt.setPreferredSize(new Dimension(0, 195));
         scrollGantt.getHorizontalScrollBar().setBackground(BACKGROUND);
         scrollGantt.getHorizontalScrollBar().setUnitIncrement(16);
 
+        // Panel de leyenda de colores
         panelLeyenda = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panelLeyenda.setBackground(BACKGROUND);
         panelLeyenda.setBorder(crearBorde(" Leyenda"));
         panelLeyenda.setPreferredSize(new Dimension(0, 60));
 
-        // Añadimos las piezas sin repetir ninguna instrucción
         panelCentro.add(panelEstado, BorderLayout.NORTH);
-        panelCentro.add(scrollGantt, BorderLayout.CENTER); // <-- El scroll se queda de forma definitiva en el centro
+        panelCentro.add(scrollGantt, BorderLayout.CENTER);
         panelCentro.add(panelLeyenda, BorderLayout.SOUTH);
-        // =====================================================================
 
-        // PANEL DERECHO — ESTADÍSTICAS FINALES
+        // ==================== PANEL DERECHO (ESTADÍSTICAS) ====================
         JPanel panelDer = new JPanel(new BorderLayout(5, 5));
         panelDer.setBackground(BACKGROUND);
         panelDer.setPreferredSize(new Dimension(420, 0));
@@ -258,6 +356,7 @@ public class InterfazSimulador extends JFrame {
         scrollStats.setBorder(BorderFactory.createLineBorder(BORDER));
         panelDer.add(scrollStats, BorderLayout.CENTER);
 
+        // Ensamblar el panel completo
         panel.add(panelEntrada, BorderLayout.WEST);
         panel.add(panelCentro, BorderLayout.CENTER);
         panel.add(panelDer, BorderLayout.EAST);
@@ -265,6 +364,10 @@ public class InterfazSimulador extends JFrame {
         return panel;
     }
 
+    /**
+     * Carga un caso de prueba predefinido para la simulación de CPU.
+     * Configura 4 procesos con diferentes tiempos de llegada y prioridades.
+     */
     private void cargarCaso1CPU() {
         modeloProcesos.setRowCount(0);
         modeloProcesos.addRow(new Object[]{1, 0, 8, 3});
@@ -274,34 +377,31 @@ public class InterfazSimulador extends JFrame {
         comboAlgoritmoCPU.setSelectedItem(AlgoritmoPlanificacion.SRTF);
     }
 
+    // ==================== MÉTODOS DE CONTROL DE CPU ====================
+    
+    /**
+     * Inicia la simulación de CPU en modo automático o paso a paso.
+     * 
+     * @param autoPlay true para simulación automática con temporizador, false para paso a paso
+     */
     private void iniciarSimulacionCPU(boolean autoPlay) {
-        // =====================================================================
-        // LOGICA DE REPRODUCCIÓN / PAUSA DE INTERRUPCIÓN
-        // =====================================================================
-        if (!autoPlay) { // Entra aquí cuando se presiona el botón PASO (Pausa)
+        // Lógica de pausa/reanudación al presionar el botón PASO
+        if (!autoPlay) {
             if (core.getPlanificadorCPU().isSimulando()) {
                 if (timerCPU != null && timerCPU.isRunning()) {
-                    // 1. Si está corriendo de forma automática, lo pausamos
                     timerCPU.stop();
-                    System.out.println("=== SIMULACIÓN PAUSADA ===");
                     return;
-                } else {
-                    // 2. Si ya estaba simulando pero estaba pausado, LO REANUDAMOS automáticamente
-                    if (timerCPU != null) {
-                        timerCPU.start();
-                        System.out.println("=== SIMULACIÓN REANUDADA ===");
-                        return;
-                    }
+                } else if (timerCPU != null) {
+                    timerCPU.start();
+                    return;
                 }
             }
         }
 
-        // Si el usuario presiona INICIAR y ya está corriendo, ignoramos el clic extra
+        // Prevenir reinicios accidentales
         if (core.getPlanificadorCPU().isSimulando() && autoPlay) return;
 
-        // =====================================================================
-        // CARGA E INICIALIZACIÓN INICIAL (Solo si no ha arrancado en el Core)
-        // =====================================================================
+        // Inicializar si es la primera vez
         if (!core.getPlanificadorCPU().isSimulando()) {
             procesosActuales.clear();
             for (int i = 0; i < modeloProcesos.getRowCount(); i++) {
@@ -326,17 +426,20 @@ public class InterfazSimulador extends JFrame {
             modeloEstadisticas.setRowCount(0);
         }
 
-        // CONTROL DEL FLUJO TEMPORIZADO
+        // Configurar el modo de simulación
         if (autoPlay) {
             if (timerCPU != null) timerCPU.stop();
             timerCPU = new javax.swing.Timer(600, e -> ejecutarTickCPU());
             timerCPU.start();
         } else {
-            // Si la simulación no había iniciado nunca y le dan a PASO directamente, ejecuta 1 tick manual
             ejecutarTickCPU();
         }
     }
 
+    /**
+     * Reinicia completamente la simulación de CPU.
+     * Limpia todos los estados, estadísticas y visualizaciones.
+     */
     private void resetSimulacionCPU() {
         if (timerCPU != null) timerCPU.stop();
         core.resetCPU();
@@ -352,17 +455,22 @@ public class InterfazSimulador extends JFrame {
         panelLeyenda.repaint();
     }
 
+    /**
+     * Ejecuta un tick de la simulación de CPU y actualiza la interfaz.
+     */
     private void ejecutarTickCPU() {
         boolean continua = core.tickCPU();
         actualizarUICPU();
         if (!continua) {
-            if (timerCPU != null) {
-                timerCPU.stop();
-            }
+            if (timerCPU != null) timerCPU.stop();
             mostrarEstadisticasCPU();
         }
     }
 
+    /**
+     * Actualiza todos los componentes visuales de la interfaz de CPU.
+     * Refleja el estado actual de colas, proceso en ejecución y diagrama de Gantt.
+     */
     private void actualizarUICPU() {
         var plan = core.getPlanificadorCPU();
         int tick = plan.getTickActual();
@@ -371,23 +479,28 @@ public class InterfazSimulador extends JFrame {
         lblReloj.setText(" Tick: " + tick);
         lblEjecucion.setText(" Ejecución: " + (ejec != null ? ejec.getNombre() : "Idle"));
 
+        // Actualizar cola de listos
         String listosStr = plan.getColaListos().stream()
                 .filter(p -> p.getEstado() == EstadoProceso.LISTO)
                 .map(Proceso::getNombre)
                 .reduce((a, b) -> a + "," + b).orElse("-");
         lblListos.setText(" Listos: " + listosStr);
 
+        // Actualizar cola de bloqueados
         String bloqStr = plan.getColaBloqueados().isEmpty() ? "-" :
                 plan.getColaBloqueados().stream().map(Proceso::getNombre)
                         .reduce((a, b) -> a + "," + b).orElse("-");
         lblBloqueados.setText(" Bloqueados: " + bloqStr);
 
+        // Actualizar cola de terminados
         String termStr = plan.getColaTerminados().stream().map(Proceso::getNombre)
                 .reduce((a, b) -> a + "," + b).orElse("-");
         lblTerminados.setText(" Terminados: " + termStr);
 
+        // Actualizar diagrama de Gantt
         panelGantt.setDatos(plan.getHistorial(), procesosActuales, tick);
 
+        // Actualizar leyenda de colores
         panelLeyenda.removeAll();
         for (Proceso p : procesosActuales) {
             JPanel item = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
@@ -404,14 +517,11 @@ public class InterfazSimulador extends JFrame {
         panelLeyenda.repaint();
     }
 
-    // MODIFICADO: RENDERIZA FILAS INDIVIDUALES Y PROMEDIOS EN LA NUEVA JTABLE
-    // REEMPLAZA ESTE MÉTODO EN InterfazSimulador.java
+    /**
+     * Muestra las estadísticas finales de todos los procesos completados.
+     * Calcula y muestra promedios de tiempo de retorno y espera.
+     */
     private void mostrarEstadisticasCPU() {
-        List<Proceso> testList = core.getPlanificadorCPU().getColaTerminados();
-        System.out.println("Cantidad de procesos en cola terminados: " + (testList != null ? testList.size() : 0));
-        // ========================================
-
-        modeloEstadisticas.setRowCount(0);
         modeloEstadisticas.setRowCount(0);
         List<Proceso> fuenteProcesos = core.getPlanificadorCPU().getColaTerminados();
 
@@ -419,13 +529,13 @@ public class InterfazSimulador extends JFrame {
             fuenteProcesos = core.getPlanificadorCPU().getProcesos();
         }
 
-        // === FILTRO CRÍTICO: Eliminamos duplicados usando un Map por ID ===
+        // Eliminar duplicados usando un mapa por ID
         Map<Integer, Proceso> mapaUnicos = new LinkedHashMap<>();
         for (Proceso p : fuenteProcesos) {
             mapaUnicos.put(p.getId(), p);
         }
 
-        // Convertimos a lista y ordenamos por ID de menor a mayor (P1, P2, P3, P4)
+        // Ordenar por ID
         List<Proceso> procesosFinales = new ArrayList<>(mapaUnicos.values());
         procesosFinales.sort(java.util.Comparator.comparingInt(Proceso::getId));
 
@@ -449,10 +559,10 @@ public class InterfazSimulador extends JFrame {
             });
         }
 
-        // Fila vacía estética de separación
+        // Fila separadora
         modeloEstadisticas.addRow(new Object[]{"", "", "", "", "", ""});
 
-        // Cálculo matemático continuo limpio basado en el tamaño de los procesos únicos reales (4)
+        // Calcular y mostrar promedios
         double promRetorno = sumRetorno / procesosFinales.size();
         double promEspera = sumEspera / procesosFinales.size();
 
@@ -466,11 +576,20 @@ public class InterfazSimulador extends JFrame {
         });
     }
 
+    // ==================== PANEL DE MEMORIA ====================
+    
+    /**
+     * Crea el panel de simulación de memoria virtual.
+     * Incluye controles de configuración y visualización de marcos y secuencia.
+     * 
+     * @return Panel configurado para la simulación de memoria
+     */
     private JPanel crearPanelMemoria() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBackground(BACKGROUND);
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // Panel de configuración (izquierda)
         JPanel panelConfig = new JPanel(new BorderLayout(5, 5));
         panelConfig.setBackground(BACKGROUND);
         panelConfig.setPreferredSize(new Dimension(350, 0));
@@ -498,6 +617,7 @@ public class InterfazSimulador extends JFrame {
         gridConfig.add(txtSecuencia);
         gridConfig.add(new JLabel());
 
+        // Botones de acción
         JPanel panelBotones = new JPanel(new GridLayout(1, 3, 5, 5));
         panelBotones.setBackground(BACKGROUND);
         JButton btnCaso2 = crearBoton("Cargar Caso 2", WARNING);
@@ -516,11 +636,7 @@ public class InterfazSimulador extends JFrame {
         panelBotones.add(btnIniciar);
         panelBotones.add(btnReset);
 
-        JPanel panelSurConfig = new JPanel(new BorderLayout(5, 5));
-        panelSurConfig.setBackground(BACKGROUND);
-        panelSurConfig.add(gridConfig, BorderLayout.CENTER);
-        panelSurConfig.add(panelBotones, BorderLayout.SOUTH);
-
+        // Área de log de eventos
         txtLogMemoria = new JTextArea();
         txtLogMemoria.setBackground(PANEL_BG);
         txtLogMemoria.setForeground(TEXT);
@@ -530,12 +646,19 @@ public class InterfazSimulador extends JFrame {
         scrollLog.setBorder(crearBorde(" Log de Eventos"));
         scrollLog.setPreferredSize(new Dimension(0, 200));
 
+        JPanel panelSurConfig = new JPanel(new BorderLayout(5, 5));
+        panelSurConfig.setBackground(BACKGROUND);
+        panelSurConfig.add(gridConfig, BorderLayout.CENTER);
+        panelSurConfig.add(panelBotones, BorderLayout.SOUTH);
+
         panelConfig.add(panelSurConfig, BorderLayout.NORTH);
         panelConfig.add(scrollLog, BorderLayout.CENTER);
 
+        // Panel de visualización (derecha)
         JPanel panelVis = new JPanel(new BorderLayout(5, 5));
         panelVis.setBackground(BACKGROUND);
 
+        // Panel de estado de memoria
         JPanel panelEstadoMem = new JPanel(new GridLayout(1, 4, 10, 5));
         panelEstadoMem.setBackground(HEADER_BG);
         panelEstadoMem.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
@@ -548,10 +671,12 @@ public class InterfazSimulador extends JFrame {
         panelEstadoMem.add(lblPasoMemoria);
         panelEstadoMem.add(lblAlgMem);
 
+        // Panel de marcos de RAM
         panelRAM = new JPanel();
         panelRAM.setBackground(BACKGROUND);
         panelRAM.setBorder(crearBorde(" Marcos de RAM"));
 
+        // Panel de secuencia de páginas
         panelSecuencia = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         panelSecuencia.setBackground(BACKGROUND);
         panelSecuencia.setBorder(crearBorde(" Secuencia de Páginas"));
@@ -567,6 +692,10 @@ public class InterfazSimulador extends JFrame {
         return panel;
     }
 
+    /**
+     * Inicia la simulación de memoria con los parámetros configurados.
+     * Valida la entrada, configura el core y lanza el temporizador automático.
+     */
     private void iniciarSimulacionMemoria() {
         resetSimulacionMemoria();
 
@@ -585,6 +714,7 @@ public class InterfazSimulador extends JFrame {
         AlgoritmoReemplazo alg = (AlgoritmoReemplazo) comboAlgMemoria.getSelectedItem();
         core.iniciarMemoria(numMarcos, secuencia, alg);
 
+        // Construir visualización de la secuencia
         panelSecuencia.removeAll();
         for (int i = 0; i < secuencia.size(); i++) {
             JLabel lbl = new JLabel(String.valueOf(secuencia.get(i)), SwingConstants.CENTER);
@@ -602,11 +732,15 @@ public class InterfazSimulador extends JFrame {
 
         reconstruirPanelRAM();
 
+        // Iniciar temporizador automático
         if (timerMemoria != null) timerMemoria.stop();
         timerMemoria = new javax.swing.Timer(800, e -> ejecutarPasoMemoria());
         timerMemoria.start();
     }
 
+    /**
+     * Reinicia la simulación de memoria, limpiando todos los estados visuales.
+     */
     private void resetSimulacionMemoria() {
         if (timerMemoria != null) timerMemoria.stop();
         core.resetMemoria();
@@ -622,6 +756,9 @@ public class InterfazSimulador extends JFrame {
         panelSecuencia.repaint();
     }
 
+    /**
+     * Reconstruye el panel visual de marcos de RAM basado en el estado actual.
+     */
     private void reconstruirPanelRAM() {
         panelRAM.removeAll();
         int numMarcos = core.getMemoriaRAM().getMarcos().size();
@@ -655,6 +792,9 @@ public class InterfazSimulador extends JFrame {
         panelRAM.repaint();
     }
 
+    /**
+     * Ejecuta un paso de la simulación de memoria y actualiza la interfaz.
+     */
     private void ejecutarPasoMemoria() {
         String mensaje = core.pasoMemoria();
         if (mensaje == null) {
@@ -671,6 +811,7 @@ public class InterfazSimulador extends JFrame {
 
         txtLogMemoria.append(mensaje + "\n");
 
+        // Actualizar contenido de los marcos
         for (Marco m : core.getMemoriaRAM().getMarcos()) {
             for (Component c : panelRAM.getComponents()) {
                 if (c instanceof JPanel) {
@@ -690,6 +831,7 @@ public class InterfazSimulador extends JFrame {
             }
         }
 
+        // Resaltar página actual en la secuencia
         int tick = core.getMemoriaRAM().getTick();
         for (Component c : panelSecuencia.getComponents()) {
             if (c instanceof JLabel && c.getName() != null) {
@@ -704,11 +846,20 @@ public class InterfazSimulador extends JFrame {
             }
         }
 
+        // Actualizar estadísticas
         lblFallos.setText(" Fallos: " + core.getMemoriaRAM().getFallos());
         lblHits.setText(" Hits: " + core.getMemoriaRAM().getHits());
         lblPasoMemoria.setText(" Paso: " + tick + "/" + core.getMemoriaRAM().getSecuencia().size());
     }
 
+    // ==================== MÉTODOS UTILITARIOS DE UI ====================
+    
+    /**
+     * Crea un borde con título estilizado.
+     * 
+     * @param titulo Título del borde
+     * @return Borde compuesto configurado
+     */
     private Border crearBorde(String titulo) {
         TitledBorder titled = BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(BORDER),
@@ -722,6 +873,13 @@ public class InterfazSimulador extends JFrame {
         );
     }
 
+    /**
+     * Crea un botón estilizado con hover effect.
+     * 
+     * @param texto Texto del botón
+     * @param color Color del texto y borde
+     * @return Botón configurado
+     */
     private JButton crearBoton(String texto, Color color) {
         JButton b = new JButton(texto);
         b.setBackground(PANEL_BG);
@@ -739,6 +897,12 @@ public class InterfazSimulador extends JFrame {
         return b;
     }
 
+    /**
+     * Crea una etiqueta de texto estilizada.
+     * 
+     * @param texto Texto de la etiqueta
+     * @return Etiqueta configurada
+     */
     private JLabel crearLabel(String texto) {
         JLabel l = new JLabel(texto);
         l.setForeground(TEXT);
@@ -746,6 +910,13 @@ public class InterfazSimulador extends JFrame {
         return l;
     }
 
+    /**
+     * Crea una etiqueta para el panel de estado.
+     * 
+     * @param texto Texto de la etiqueta
+     * @param color Color del texto
+     * @return Etiqueta configurada
+     */
     private JLabel crearLabelEstado(String texto, Color color) {
         JLabel l = new JLabel(texto);
         l.setForeground(color);
@@ -753,6 +924,11 @@ public class InterfazSimulador extends JFrame {
         return l;
     }
 
+    /**
+     * Aplica estilo uniforme a una tabla JTable.
+     * 
+     * @param t Tabla a estilizar
+     */
     private void estilizarTabla(JTable t) {
         t.setBackground(PANEL_BG);
         t.setForeground(TEXT);
